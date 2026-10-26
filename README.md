@@ -12,10 +12,20 @@ it needs **no data at all**.
 
 ```
 python3 validate.py                       # 17 known answers. run this first
+python3 compare.py --selftest             # 15 more, for the two-encoding diff
 python3 ladder_demo.py                    # a real broken rule, mine
 python3 staged_demo.py                    # a rule written in prose, encoded
 python3 harvest.py <scienceverse-clone>   # census over a whole repo
+
+python3 equiv_demo.py                     # needs numpy + scipy
+python3 nextmodel_demo.py                 # needs scipy
 ```
+
+`reach.py`, `validate.py`, `harvest.py`, `compare.py`, `ladder_demo.py` and
+`staged_demo.py` need **nothing but the standard library**. The last two demos
+measure frequencies and want numpy/scipy; their committed output is in
+`EQUIV_REPORT.txt` and `NEXTMODEL_REPORT.txt` if you would rather read than
+run.
 
 ## What it reads
 
@@ -87,7 +97,9 @@ Both can hold at once, and in equivalence testing that is the most informative
 result on the board — a real effect, too small to matter. It is not a
 contradiction. The three-verdict scheme simply has no name for it, so
 `study_eval.R` sends it to `inconclusive`, where "we learned nothing" also
-lives. The first version of this tool called that a defect. It was wrong.
+lives. The first version of this tool called that a defect. It was wrong, and it
+is still wrong: **the overlap is not a bug.** What turned out to be there
+instead is in the next section, and it is a different kind of thing.
 
 ## Census over the `scienceverse` repository
 
@@ -126,6 +138,148 @@ four lines, written by the two authors of the paper on machine-readable
 falsifiability, inside their own repository, in which falsification was
 impossible — and every tool in the chain stayed quiet. If it can happen there it
 is not a discipline problem. It is a missing check.
+
+## Two encodings of one sentence
+
+`compare.py` asks a second question that came out of that fourth-state case: a
+paper states its decision rule in prose and its code states it in criteria —
+**do the two return the same verdict on every result pattern that can happen?**
+
+A disagreement is reported only with a **verified numeric witness**, a vector of
+result values that realises it. A cell that differs propositionally but has no
+numbers prints `NO WITNESS` and is not counted, which is the same rule the
+checker uses everywhere: when an instrument cannot reach a verdict it says so
+rather than guessing the likelier one.
+
+### The instance: `equiv_demo.py`
+
+Lakens & DeBruine state the recipe twice on page 4. Both times corroboration
+carries a **second conjunct**:
+
+> "corroborated when we can statistically conclude that the observed mean
+> difference for at least one measure is **both greater than 0 and not smaller
+> than** the smallest effect size of interest (SESOI)"
+
+> "corroborated if at least one of our 97.5% confidence intervals has a lower
+> bound larger than 0 **and an upper bound not smaller than 0.2**"
+
+On a single measure that second conjunct is exactly the negation of the
+falsification criterion, so **their recipe is mutually exclusive by
+construction** — which is why the flagship kinship example comes back clean.
+
+`vignettes/sim.Rmd` drops it. Its corroboration is one criterion, and its own
+English gloss says so: *"corroborated if dog owners are significantly happier
+than cat owners."* No second clause. **This is not a coding slip — it is a
+weaker recipe that reads perfectly naturally in English.** What it costs is the
+one result pattern a SESOI exists to catch.
+
+```
+paper p.4 (CI form, one measure)   VS   sim.Rmd (as written)
+  2 criteria, 4 truth assignments
+  DISAGREE on 1 feasible pattern(s):
+    falsify      where the other says inconclusive  x1
+    - true: above0, belowS
+      witness: t.conf.int[1]=0.0666667, t.conf.int[2]=0.133333
+```
+
+An effect reliably above zero and reliably below the SESOI. The paper's recipe
+calls that `falsify`, correctly: the prediction was that the effect is big
+enough to matter, and it is not. The vignette's calls it `inconclusive`.
+
+### How often, measured
+
+Five predictions, in order, **two of them dead and kept verbatim** in the
+output. With a true effect at half the SESOI, per group:
+
+| n | both criteria significant | paper = falsify | vignette = inconclusive | disagree |
+|---|---|---|---|---|
+| 500 | 0.000 | 0.473 | 0.053 | 0.000 |
+| 1000 | 0.447 | 0.722 | 0.447 | **0.447** |
+| 2000 | 0.868 | 0.931 | 0.868 | **0.868** |
+| 10000 | 1.000 | 1.000 | 1.000 | **1.000** |
+
+The disagreement rate **goes to one**. For any true effect strictly inside
+(0, SESOI) both one-sided tests are testing a true alternative, so both become
+significant, so the vignette's rule converges to `inconclusive` exactly where
+more data should buy certainty.
+
+### A vanishing branch
+
+The sharper half. The vignette's `falsify` branch **is** propositionally
+reachable, so this checker passes it and so does branch coverage. But inside
+(0, SESOI) it demands *significantly below the SESOI and NOT significantly above
+zero* — power on one test and a lack of it on the other:
+
+| n per group | P(vignette = falsify) | P(paper = falsify) |
+|---|---|---|
+| 500 | 0.4758 | 0.4763 |
+| 1000 | 0.2791 | 0.7235 |
+| 2000 | 0.0613 | 0.9336 |
+| 10000 | **0.0000** | **1.0000** |
+
+The same rule at low power; opposite rules at high power. Its falsification is
+reachable **only by a study too small to see the effect it has.** Call it a
+vanishing branch: every static check is satisfied, and the asymptotics are not.
+
+And the whole thing is governed by two numbers and nothing else —
+`(z0, zS) = (d, S−d)·√(n/2)`. Hold both fixed and vary n by a factor of 100 and
+every rate matches to 0.006. So whether that branch can fire is set by the
+study's **power** against 0 and against the SESOI: not by the hypothesis, not by
+the prose, and not by anything a reviewer sees.
+
+## When the rule is run on a model that does not exist yet
+
+`nextmodel_demo.py`, on Thomas, Gligorić & Shah, *Mitigating LLM-based p-Hacking
+by Preregistering for the Next LLM*,
+[arXiv:2606.27687](https://arxiv.org/abs/2606.27687).
+
+Their protocol: finalise the procedure on today's models, preregister the plan
+**together with a set of eligible future models**, and run the confirmatory
+analysis on the first eligible model released afterward. It cannot be hacked
+against because it does not exist. Measured, it blocks 73.9% and 72.7% of
+transferred hacks across 20 models. **The protocol works and this is not a
+rebuttal.**
+
+Their Table 1 field 2 tells the author to fix inclusion thresholds "such as
+price per token, a minimum benchmark score, a maximum output-violation rate", so
+the eligible set carries a **floor on capability by design**. Their own
+conclusion agrees from the other side: "as models improve, researchers may
+already want to adopt the strongest available model".
+
+Now put that beside the analysis, which they operationalise as a threshold on
+the target-label rate. A threshold rule has branches; a branch's probability is
+a binomial tail; so each branch is live only over a **band** of labeller
+behaviour. On their review task — 100 items, true rate zero by construction,
+exact binomial, no simulation:
+
+| labeller false-positive rate | live branches |
+|---|---|
+| 0.00 | 1 — negligible only |
+| 0.02 | 2 |
+| **0.036 – 0.140** | **3 — all of them** |
+| 0.15 | 2 |
+| 0.25 | 1 — substantial only |
+
+All three outcomes are available only inside a window spanning **a factor of
+about four** in labeller error. Outside it, one of the two decisive verdicts
+drops under one in a thousand.
+
+So the cuts and the floor can be chosen together, before the confirmatory model
+exists, such that one outcome is the only one it can produce. **Nothing is tuned
+after seeing data.** The commitment is real, the timestamp is real, the model
+genuinely did not exist — every defence in their paper is satisfied and none of
+them is aimed at this, because it is not p-hacking. The thing that decided the
+result is the minimum benchmark score in field 2.
+
+The ask is one line, between their fields 2 and 5: for each outcome the rule can
+declare, state the range of model behaviour over which that outcome is
+reachable, and check it against the floor you just wrote down. It is exact
+arithmetic, and unlike the confirmatory run it can be done the day the
+preregistration is filed.
+
+**Honest limit:** that instance is constructed. It was not found in their data,
+and they are the ones holding the data that could settle whether the band is
+real across model generations.
 
 ## The rule that started it
 
@@ -190,6 +344,26 @@ verdict semantics on purpose to check the suite notices. It caught two real bugs
 before the checker said anything about anybody: a non-strict bound silently
 relaxing a strict one (`p < .05` became `p <= .05`, witness `p = 0.05`), and an
 `UNDEFINED` flag swallowed by an early return.
+
+Three more of this repository's own instruments were wrong, and are recorded
+because a wrong instrument produces confident wrong accusations:
+
+* `compare.py`'s `--force-red` **passed when it should have failed.** It did
+  `import compare as _self` while running as `python3 compare.py`, which makes a
+  second module object — `__main__` is the one being called — so the patch
+  landed on a copy nothing used. A check that cannot fail is not a check.
+* `reach.py` placed **one** point strictly inside each gap between breakpoints,
+  so two variables tied by a strict relation that must both land in one gap had
+  a single candidate to share. `0 < conf.int[1] < conf.int[2] < 0.2` is ordinary
+  and the old pool reported it `NO WITNESS`. Fixed; `interior=1` is
+  bit-identical to the old pool over 2000 random cases, and enlarging a pool can
+  only turn a `NO WITNESS` into a witness, so **no number published here moves**
+  — the census re-ran at the same 37/18/15/1/2.
+* The first version of `equiv_demo.py` allocated about a gigabyte of raw samples
+  it did not need. Both one-sided tests are functions of the difference of means
+  and the pooled standard error, so `tsim.py` simulates those **sufficient
+  statistics** instead: peak 0.3 MB against 640 MB, validated against raw-data
+  scipy on three settings by KS test and rejection rate before it was used.
 
 **The first census produced six flags and four were mine**, each caught by
 hand-checking it against the source: named R arguments dropping a criterion; no

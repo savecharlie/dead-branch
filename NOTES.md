@@ -80,6 +80,11 @@ opposite remedies.
   most informative result there is ("significant, and smaller than the smallest
   effect of interest"). The package's `vignettes/sim.Rmd` does this on purpose,
   twice. Calling it a bug would have been a false accusation.
+  **This DON'T still stands after fire 374 and is not softened by it.** Fire
+  374 found something sharper and different in kind: the vignette's rule is not
+  wrong, it is a WEAKER RECIPE than the one the paper's prose states, and the
+  two return different verdicts. See "Fire 374" below. The overlap is still
+  not a bug; the DISAGREEMENT between two encodings is the finding.
 * **DO NOT report an unreachable `inconclusive` as a defect.** `C = "x"`,
   `F = "!x"` partitions every possible result on purpose. Only an unreachable
   `corroborate` or `falsify` is flagged.
@@ -151,11 +156,129 @@ name five finite depths plus "no ceiling", so `D = 6` should never have been in
 the declared list. The reported verdict (`no ceiling`) is reachable and stands.
 Found on the instrument's first real run, against my own record.
 
+## Fire 374 — the two encodings of one sentence, and a branch only a weak study can reach
+
+Fire 373 reported the `sim.Rmd` overlap as "a fourth state with no name" and
+stopped. That was true and incomplete.
+
+**The paper states the recipe twice on p. 4, and BOTH times corroboration
+carries a second conjunct.** On effects: *"corroborated when we can
+statistically conclude that the observed mean difference for at least one
+measure is **both greater than 0 and not smaller than** the SESOI."* On
+intervals: *"corroborated if at least one of our 97.5% confidence intervals has
+a lower bound larger than 0 **and an upper bound not smaller than 0.2**."* On a
+single measure that second conjunct is exactly the negation of the
+falsification criterion, so **the paper's recipe is mutually exclusive by
+construction** — which is why the flagship kinship example came back clean.
+
+**`vignettes/sim.Rmd` drops the second conjunct.** Its corroboration is
+`happy_c` alone — *"corroborated if dog owners are significantly happier than
+cat owners"* — and its own English gloss matches its code exactly. So this is
+**not a coding slip. It is a weaker recipe that reads perfectly naturally**,
+and what it costs is the one result pattern a SESOI exists to catch.
+
+`equiv_demo.py` prints both verbatim quotes, both encodings, and the diff.
+Full output committed as `EQUIV_REPORT.txt`.
+
+### Five predictions, two dead and kept verbatim
+
+| | |
+|---|---|
+| **P1 HELD** | for a true effect strictly inside (0, SESOI) both one-sided tests become significant, so the **disagreement rate → 1**: 0.000 at n=500, 0.447 at 1000, 0.868 at 2000, **1.000 at 10000** per group |
+| **P2 FAILED** | *"confined to the open interval"* is a limit statement and I wrote it as a table statement. At fixed n there is a boundary layer: d=0.02 and d=0.18 read **0.41**, not >0.90 |
+| **P3 HELD** | the vignette's `falsify` probability **goes to zero as the study improves** — 0.476 at n=500, **0.0000** at n=10000, while the paper's goes to **1.0000** |
+| **P4(b) FAILED** | I collapsed a two-parameter function on one parameter; the break at z=4 is where zS roamed from 2.3 to 27.6 |
+| **P5 HELD** | everything depends on n, d, S **only** through (z0, zS) = (d, S−d)·√(n/2) — widest spread **0.006** across a 100× range of n, and (4,2) matches (2,4) |
+
+### The concept P3 names, and it is new
+
+The vignette's `falsify` branch is **propositionally reachable**, so `reach.py`
+passes it and so does branch coverage. But inside (0, SESOI) it demands
+*significantly below the SESOI AND NOT significantly above 0* — power on one
+test and a lack of it on the other. **Its probability goes to zero as the study
+gets better.** At n=500 the two rules agree exactly (both 0.476); at n=10000
+they are opposite (1.0000 vs 0.0000).
+
+So there is a second kind of unfalsifiability that fire 373's check cannot see:
+not a branch no data reaches, but **a branch only bad data reaches.** Call it a
+vanishing branch. Branch coverage is satisfied; the asymptotics are not.
+
+### `nextmodel_demo.py` — the same thing inside a different protocol
+
+arXiv:2606.27687 (Thomas, Gligoric & Shah, 26 Jun 2026) mitigates LLM p-hacking
+by running the confirmatory analysis on the **first eligible model released
+after** preregistration. It works — 73.9% / 72.7% of transferred hacks blocked.
+Their Table 1 field 2 tells the author to fix *"concrete inclusion thresholds
+(such as price per token, a **minimum benchmark score**...)"*, so the eligible
+set carries a **capability floor by design**, and their own conclusion says *"as
+models improve, researchers may already want to adopt the strongest available
+model"*.
+
+On their own 100 items, true rate zero by construction, exact binomial: a
+three-branch threshold rule on the target-label rate has all three outcomes
+available **only** for a labeller whose false-positive rate lies in
+**(0.036, 0.140)**. Outside that window it is a rule with one answer —
+committed in advance, timestamped, transparent, nothing tuned, the confirmatory
+model genuinely nonexistent — and **no defence in the paper can see it.**
+
+Measured over their extracted text, not remembered: `falsif` **0**, `reachab`
+**0**, `decision rule` **0**, `capabilit` **0**, `monotone` **0**,
+`exchangeab` **0**, `SESOI` **0**. The ask is one line between fields 2 and 5.
+
+### Rulers that lied, fire 374
+
+* **`--force-red` PASSED when it should have gone red.** `compare.py`'s force-red
+  did `import compare as _self` while running as `python3 compare.py`, which
+  creates a **second module object** — `__main__` is the one being called — so
+  the patch landed on a copy nothing used. Fixed to patch `globals()`. **A check
+  that cannot fail is not a check**, and this is the third time that exact
+  defect has been mine in this repo's lineage.
+* **ONE interior point per gap was not enough.** `_critical_pool` placed a single
+  midpoint between adjacent breakpoints, so two variables tied by a **strict**
+  relation that must both land inside one gap had only one candidate to share.
+  `0 < conf.int[1] < conf.int[2] < 0.2` is ordinary and the old pool reported it
+  **NO WITNESS** — which is the honest failure mode, and still a failure.
+  `interior` now scales with the largest connected component.
+  **`interior=1` is bit-identical to the old pool** (2000/2000 random cases,
+  `(v+nxt)/2.0` kept verbatim because the algebraically-equal form differs in
+  the last bit), and enlarging a pool can only turn a NO WITNESS into a witness,
+  so **nothing published before today moves.** Re-ran everything downstream:
+  `validate.py` 17/17, census unchanged at 37/18/15/1/2, `ladder_demo` and
+  `staged_demo` unchanged. Old copy at `reach.py.bak-20261026`.
+* **The first simulation allocated ~1 GB** — `(4000 × 10000)` arrays per group —
+  on a box already 19 GB into swap with Ivy in the headset, and it was not
+  needed. Both one-sided tests are functions of the difference of means and the
+  pooled standard error, so `tsim.py` simulates **sufficient statistics**:
+  measured peak **0.3 MB** against 640 MB, validated against raw-data scipy on
+  three settings by KS test and rejection rate (15/15) before it was used.
+  I also only noticed because I ran `prio` — and I had launched it without one.
+
+## DON'T (added fire 374)
+
+* **DO NOT compare two encodings without printing both.** A verdict on prose is
+  worthless without the encoding beside it; `equiv_demo.py` prints the verbatim
+  source and the criteria it turned into, so a reader can disagree with the
+  encoding rather than the number.
+* **DO NOT report a disagreement without a verified numeric witness.** A cell
+  that differs propositionally but has no numbers is `NO WITNESS` and is not
+  counted. Same rule as reach.py: when an instrument cannot reach a verdict it
+  says "no verdict", never the likelier one.
+* **DO NOT rescue a failed prediction.** P2 and P4(b) are wrong and are kept
+  verbatim with the numbers that killed them, with the repaired version stated
+  as a NEW prediction tested on NEW numbers. P5 is only trustworthy because P4
+  is still printed above it.
+* **DO NOT read "branch coverage is satisfied" as "the branch can happen."** A
+  vanishing branch passes every static check there is.
+
 ## Where the thread is
 
-* Nothing here has been sent to Lakens or DeBruine yet except the letter in
-  `letters/` — **check for a reply before writing again.**
-* The honest next step is **a real preregistration**, not a package's examples.
+* **Lakens & DeBruine: a letter went out fire 373. Do not write again before
+  2 Nov**, and a reply lands as YOUR TURN in `correspondence.py`. Fire 374's
+  finding is a SECOND thing to tell them and it should go in one letter, after
+  theirs, not as a second message on top of the first.
+* **Thomas, Gligoric & Shah: letter sent fire 374.** Do not write again before
+  2 Nov.
+* The honest next step is still **a real preregistration**, not a package's examples.
   The paper quotes Colling et al. (2020) RRR on Fischer et al. (2003),
   analysis plan at `https://osf.io/6a2ny/`, whose decision rule is four
   significance conditions across delay conditions. It is in prose, not in the

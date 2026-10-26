@@ -1,0 +1,110 @@
+nextmodel_demo.py -- the eligibility floor is a parameter of the decision rule.
+
+Fire 374, on arXiv:2606.27687 (Thomas, Gligoric & Shah, 26 Jun 2026),
+"Mitigating LLM-based p-Hacking by Preregistering for the Next LLM".
+
+Their protocol: finalise the procedure on today's models, preregister the
+analysis plan TOGETHER WITH a set of eligible future models, and run the
+confirmatory analysis on the first eligible model released afterward. The
+confirmatory model does not exist at commitment time, so it cannot be hacked
+against -- measured, 73.9% and 72.7% of transferred hacks blocked across 20
+models and 11 configurations. The protocol works and this is not a rebuttal.
+
+Their Table 1, field 2, tells the author to fix "concrete inclusion
+thresholds (such as price per token, a MINIMUM BENCHMARK SCORE, a maximum
+output-violation rate...)". So the eligible-model set carries a FLOOR on
+capability, deliberately -- "rather than accepting whatever model comes next,
+the researcher accepts only the model that meets their predefined and
+checkable conditions". Their own conclusion notes the same drift from the
+other side: "as models improve, researchers may already want to adopt the
+strongest available model".
+
+The composition nobody has made, and it is the same one fire 373 made for
+Lakens & DeBruine: a preregistered decision rule is a program, and which of
+its branches can fire is a question you can ask before any data exists.
+Under this protocol the answer depends on the capability floor the author
+wrote into field 2 -- so a rule can be committed in advance, timestamped,
+transparent, unhackable by every defence in the paper, and still have only
+ONE branch the confirmatory model can reach.
+
+Nothing here is tuned after seeing data. That is the point: it is not
+p-hacking, and that is exactly why none of the paper's defences see it.
+
+Measured over the paper's own 100 items, with capability as the labeller's
+false-positive rate on a corpus whose true rate is zero by construction --
+their review task, built that way on purpose.
+
+  python3 nextmodel_demo.py
+
+==========================================================================
+1. THE RULE, AND WHAT PURE LOGIC SAYS ABOUT IT
+  rule, in criterion form:
+    over_high  = annot.rate > 0.1
+    under_low  = annot.rate < 0.05
+    SUBSTANTIAL if over_high; NEGLIGIBLE elif under_low; else INCONCLUSIVE
+
+  reach.py, with no data:
+    INCONCLUSIVE  reachable (1 assignment(s))   e.g. annot.rate=0.075
+    NEGLIGIBLE    reachable (1 assignment(s))   e.g. annot.rate=0.025
+    SUBSTANTIAL   reachable (2 assignment(s))   e.g. annot.rate=0.55
+    declared but unreachable: none
+  -> all three branches reachable. Branch coverage is satisfied.
+
+==========================================================================
+2. KNOWN ANSWERS FIRST
+  11/11 hand-computed checks passed
+
+==========================================================================
+3. THE SAME RULE, AGAINST CAPABILITY
+  PREDICTION, written before the table. A branch's probability is a binomial
+  tail, so each one is live only over a BAND of labeller false-positive rates,
+  and the bands do not cover each other. Specifically: there should be a
+  capability good enough that SUBSTANTIAL falls under 1-in-1000 while
+  NEGLIGIBLE is near-certain -- at which point the rule has ONE outcome the
+  confirmatory model can produce, and the thing that chose it is the minimum
+  benchmark score the author wrote into field 2 of the preregistration. If
+  instead all three branches stay live across the whole plausible range, the
+  concern is theoretical and I will say so.
+
+  n = 100 items (the paper's own), true rate 0 by construction,
+  thresholds 0.05 / 0.1, exact binomial -- no simulation.
+
+     fpr  P(SUBSTANTIAL)  P(INCONCLUSIVE)  P(NEGLIGIBLE)  live branches
+    0.00        0.00e+00         0.00e+00       1.00e+00  1: NEGL
+    0.01        6.26e-09         3.43e-03       9.97e-01  2: INCO, NEGL
+    0.02        5.65e-06         5.08e-02       9.49e-01  2: INCO, NEGL
+    0.03        2.15e-04         1.82e-01       8.18e-01  2: INCO, NEGL
+    0.05        1.15e-02         5.53e-01       4.36e-01  3: SUBS, INCO, NEGL
+    0.07        9.08e-02         7.46e-01       1.63e-01  3: SUBS, INCO, NEGL
+    0.10        4.17e-01         5.59e-01       2.37e-02  3: SUBS, INCO, NEGL
+    0.15        9.01e-01         9.90e-02       4.26e-04  2: SUBS, INCO
+    0.25        1.00e+00         1.37e-04       1.76e-08  1: SUBS
+    0.40        1.00e+00         2.34e-11       5.39e-17  1: SUBS
+
+  rows where the rule has ONE reachable outcome: [0.0, 0.25, 0.4]
+  PREDICTION HELD.
+
+==========================================================================
+4. THE WINDOW
+  SUBSTANTIAL drops below 1-in-1000 at a false-positive rate of 0.0361
+  NEGLIGIBLE  drops below 1-in-1000 at a false-positive rate of 0.1402
+  so the rule has all three outcomes available only for a labeller
+  whose false-positive rate on this corpus lies in (0.036, 0.140).
+  Outside that window it is a rule with one answer, committed in
+  advance, and no defence in the paper can see it -- nothing was
+  tuned, and the confirmatory model genuinely did not exist.
+  (both roots verified by re-evaluation: True)
+
+==========================================================================
+  WHAT THIS ASKS FOR, and it is one line in their Table 1.
+
+  Field 2 already makes the author name the eligible-model set and a minimum
+  benchmark score. Field 5 already makes them state "the precise statistical
+  tests and how results will be interpreted". The missing requirement sits
+  between the two: for each outcome the rule can declare, state the range of
+  model behaviour over which that outcome is reachable -- and check it against
+  the floor in field 2 before the preregistration is filed.
+
+  It costs an author the arithmetic above, which is exact and takes seconds,
+  and it is the only one of the paper's protections that does not need the
+  future to arrive first.

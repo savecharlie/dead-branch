@@ -311,14 +311,25 @@ def _var_witness(cons, domain):
     return False, None
 
 
-def _critical_pool(reg: Registration) -> list[float]:
+def _critical_pool(reg: Registration, interior: int = 1) -> list[float]:
     """For predicates built only from comparisons against a finite set of
     breakpoints, a witness exists iff one exists among the breakpoints, points
     just either side of them, and one point beyond each extreme. That finite
     pool is what the search below is over, which is why a search failure here
     is close to a proof -- but it is still reported as "no witness found", not
     as unreachable, because the pool argument is mine and the proof of
-    unreachability I am willing to publish is the propositional one."""
+    unreachability I am willing to publish is the propositional one.
+
+    `interior` is the number of points placed strictly inside each gap between
+    adjacent breakpoints. ONE IS NOT ENOUGH when two variables are tied by a
+    STRICT relation and both must land inside the same gap: with a single
+    midpoint the only candidate is shared, so `lo < hi` cannot be satisfied and
+    a feasible pattern is reported NO WITNESS. Found fire 374 on
+    `equiv_demo.py`: `0 < conf.int[1] < conf.int[2] < 0.2` is ordinary and the
+    old pool could not express it. `interior=1` reproduces the old pool
+    exactly, so every number published before this change is unaffected --
+    and enlarging the pool can only turn a NO WITNESS into a witness, never
+    the reverse, so no propositional verdict can move either."""
     vals = sorted({float(c.value) for c in reg.criteria if not c.is_pairwise})
     for lo, hi in reg.domains.values():
         vals += [lo, hi]
@@ -330,7 +341,18 @@ def _critical_pool(reg: Registration) -> list[float]:
     for i, v in enumerate(vals):
         pool += [v - d, v, v + d]
         if i + 1 < len(vals):
-            pool.append((v + vals[i + 1]) / 2.0)
+            nxt = vals[i + 1]
+            if interior == 1:
+                # the original expression, kept EXACTLY so the pool is
+                # bit-identical to every pool used before fire 374 --
+                # v + (nxt - v) * 1/2 is the same number in arithmetic and a
+                # different one in floating point, and a pool value sitting a
+                # last-bit away from a breakpoint is exactly where a strict
+                # comparison could flip.
+                pool.append((v + nxt) / 2.0)
+            else:
+                for j in range(1, interior + 1):
+                    pool.append(v + (nxt - v) * j / (interior + 1))
     return sorted(set(pool))
 
 
@@ -395,7 +417,10 @@ def numeric_witness(reg: Registration, assignment: dict[str, bool]):
             raise ValueError(op)
         return got == truth
 
-    pool = _critical_pool(reg)
+    # how many points strictly inside each gap: enough for the longest strict
+    # chain that could be forced into one gap, which is the largest component.
+    _maxcomp = max((len(m) for m in comps.values()), default=1)
+    pool = _critical_pool(reg, interior=_maxcomp if _maxcomp <= 4 else 1)
     pick: dict[str, float] = {}
     for _root, members in comps.items():
         local = [p for p in pairs if p[0] in members or p[2] in members]
@@ -421,6 +446,11 @@ def numeric_witness(reg: Registration, assignment: dict[str, bool]):
             feas.append(cand)
         if len(members) > 4:
             return None            # refuse to pretend; reported as "no witness"
+        combos = 1
+        for f in feas:
+            combos *= len(f)
+        if combos > 2_000_000:
+            return None            # same refusal, on cost rather than size
         found = None
         for combo in itertools.product(*feas):
             env = dict(zip(members, combo))

@@ -1,0 +1,258 @@
+equiv_demo.py -- the paper's recipe and the package's vignette, side by side.
+
+Fire 374. Fire 373's census of 18 distinct scienceverse rules flagged two
+"reachable fourth state" hits in `vignettes/sim.Rmd` -- rules where
+corroboration and falsification can BOTH hold, which `R/study_eval.R` routes
+to `inconclusive` in an unannotated else-branch. I reported that as a state
+with no name in a three-verdict scheme and left it there.
+
+It is sharper than that, and the sharpening is not a bug report.
+
+The paper states the recipe twice on page 4, once on effects and once on
+confidence intervals, and BOTH times corroboration carries a second conjunct:
+the effect must be greater than zero AND not smaller than the SESOI. On a
+single measure that second conjunct is exactly the negation of the
+falsification criterion, so the paper's recipe is mutually exclusive by
+construction -- and the paper's flagship 4- and 12-criterion kinship example
+came back clean in fire 373's census.
+
+`vignettes/sim.Rmd` drops the second conjunct. Its corroboration is
+"significantly happier than cat owners", full stop. Its own English gloss says
+exactly that, so this is not a coding slip -- it is a weaker recipe that reads
+perfectly naturally. What it costs is the one result pattern a SESOI exists to
+catch: an effect reliably above zero and reliably below the SESOI.
+
+Run it and the two encodings disagree on exactly that pattern. The paper's
+recipe calls it `falsify`. The vignette's calls it `inconclusive`.
+
+Nothing here needs data. The last section computes a real pair of t-tests
+anyway, because "logically possible" and "statistically ordinary" are
+different claims and only one of them is interesting.
+
+==========================================================================
+Lakens & DeBruine 2021, AMPPS 4(2), doi:10.1177/2515245920970949, p. 4,
+section "What Does a Machine-Readable ... Prediction Look Like?" -- verbatim:
+
+  "we might conclude that the study's prediction is corroborated when we can
+   statistically conclude that the observed mean difference for at least one
+   measure is both greater than 0 and not smaller than the smallest effect
+   size of interest (SESOI). The prediction is falsified if both effects are
+   smaller than the SESOI. Any other pattern of results, such as both effects
+   being neither significantly larger than 0 nor smaller than the SESOI, is
+   inconclusive."
+
+and, made exact on one measure a few lines later:
+
+  "we can conclude that we have corroborated our prediction if at least one of
+   our 97.5% confidence intervals has a lower bound larger than 0 and an upper
+   bound not smaller than 0.2. We can decide that our prediction is falsified
+   if the upper bounds of both 97.5% confidence intervals are smaller than
+   0.2, and our data are inconclusive in all other situations."
+
+scienceverse@97d4054, vignettes/sim.Rmd lines 87-95 -- verbatim:
+
+  add_criterion("happy_c", "p.value", "<", 0.05)      # t-test vs 0
+  add_criterion("happy_f", "p.value", "<", 0.05)      # t-test vs mu = 0.2 (SESOI)
+  add_eval("corroboration", "happy_c",
+           "The hypothesis will be corroborated if dog owners are
+            significantly happier than cat owners.")
+  add_eval("falsification", "happy_f",
+           "The hypothesis will be falsified if dog owners are significantly
+            less than 0.2 units happier than cat owners.")
+
+==========================================================================
+ENCODINGS, printed because a verdict on prose is worthless without them:
+
+  paper p.4 (CI form, one measure)   [Lakens & DeBruine 2021 p. 4]
+    above0   = t.conf.int[1] > 0.0
+    belowS   = t.conf.int[2] < 0.2
+    corroboration = above0 & !belowS
+    falsification = belowS
+    relations     = [('t.conf.int[1]', '<', 't.conf.int[2]')]
+
+  sim.Rmd (as written)   [scienceverse@97d4054 vignettes/sim.Rmd]
+    above0   = t.conf.int[1] > 0.0
+    belowS   = t.conf.int[2] < 0.2
+    corroboration = above0
+    falsification = belowS
+    relations     = [('t.conf.int[1]', '<', 't.conf.int[2]')]
+
+==========================================================================
+KNOWN ANSWERS FIRST
+  11/11 hand-computed checks passed
+
+==========================================================================
+REACHABILITY, each rule on its own
+
+  paper p.4 (CI form, one measure)
+    reachable verdicts : corroborate, falsify, inconclusive
+    C and F both true  : False
+
+  sim.Rmd (as written)
+    reachable verdicts : corroborate, falsify, inconclusive
+    C and F both true  : True  witness {'t.conf.int[2]': 0.1333, 't.conf.int[1]': 0.0667}
+
+==========================================================================
+THE DIFF
+paper p.4 (CI form, one measure)   VS   sim.Rmd (as written)
+  2 criteria, 4 truth assignments
+  DISAGREE on 1 feasible pattern(s):
+    falsify      where the other says inconclusive  x1
+    - true: above0, belowS
+      A=falsify  B=inconclusive
+      witness: t.conf.int[1]=0.0666667, t.conf.int[2]=0.133333
+
+==========================================================================
+IS THE DISAGREEING PATTERN ORDINARY?
+  n = 500 per group, true difference 0.1, SESOI 0.2, seed 374
+  observed mean difference  +0.1440
+  p vs 0     = 0.01005  (< .05)  -> above0 = True
+  p vs SESOI = 0.18285  (>= .05)  -> belowS = False
+  paper p.4 (CI form, one measure)   -> corroborate
+  sim.Rmd (as written)               -> corroborate
+
+==========================================================================
+HOW OFTEN?
+  PREDICTION, written before the numbers and kept whatever they say: if the
+  true difference lies strictly between 0 and the SESOI, both one-sided tests
+  are testing a true alternative, so each becomes significant with probability
+  -> 1 as n grows. So the overlap is not a corner case -- it is the ASYMPTOTIC
+  outcome over that whole interval, and the vignette's rule converges to
+  `inconclusive` exactly where more data buys certainty. If instead the
+  overlap frequency peaks and falls away, the prediction is dead and this is a
+  small-sample curiosity.
+
+  true difference 0.1 (half the SESOI 0.2), 40000 reps per n
+
+   n/group  both sig  paper=falsify  vign=inconcl  disagree
+        50     0.000          0.124         0.750     0.000
+       100     0.000          0.170         0.654     0.000
+       250     0.000          0.299         0.402     0.000
+       500     0.000          0.473         0.053     0.000
+      1000     0.447          0.722         0.447     0.447
+      2000     0.868          0.931         0.868     0.868
+      5000     0.999          1.000         0.999     0.999
+     10000     1.000          1.000         1.000     1.000
+
+  monotone and -> 1 : True
+  PREDICTION HELD.
+
+==========================================================================
+WHERE DOES IT LIVE, AND WHAT HAPPENS TO `falsify`?
+  PREDICTION: the disagreement is confined to the OPEN interval (0, SESOI) --
+  the region a SESOI exists to adjudicate -- and the two encodings AGREE at a
+  true difference of 0 and at anything above the SESOI.
+
+  (1) sweep, n = 10000 per group, SESOI 0.2, 40000 reps
+    true d region           disagree  paper=fals  vign=fals
+      0.00 = 0                 0.047       1.000      0.953
+      0.02 inside (0,S)        0.405       1.000      0.595
+      0.05 inside (0,S)        0.971       1.000      0.029
+      0.10 inside (0,S)        1.000       1.000      0.000
+      0.15 inside (0,S)        0.971       0.971      0.000
+      0.18 inside (0,S)        0.409       0.409      0.000
+      0.20 = SESOI             0.050       0.050      0.000
+      0.25 above SESOI         0.000       0.000      0.000
+      0.40 above SESOI         0.000       0.000      0.000
+
+  confined to the open interval : False
+
+  PREDICTION: the vignette's `falsify` branch is propositionally reachable, so
+  reach.py passes it and so does branch coverage. But inside (0, SESOI) it
+  demands "significantly below the SESOI AND NOT significantly above 0" --
+  power on one test and a lack of it on the other. Its probability should go
+  to ZERO as n grows: a branch only an underpowered study can reach.
+
+  (2) the vignette's `falsify` branch as n grows, true d = 0.10
+   n/group  P(vignette=falsify)   P(paper=falsify)
+        50               0.1226             0.1226
+       100               0.1761             0.1761
+       250               0.2977             0.2977
+       500               0.4758             0.4763
+      1000               0.2791             0.7235
+      2000               0.0613             0.9336
+      5000               0.0004             0.9996
+     10000               0.0000             1.0000
+
+  goes to zero as the study improves : True
+  PREDICTION 3 HELD.
+  A branch branch-coverage passes, that only an underpowered study
+  can reach: reachable in logic, vanishing in practice.
+
+  🛑 PREDICTION 2 FAILED, AND THE FAILURE IS THE USEFUL PART.
+  It is kept exactly as written. At a FIXED n the disagreement is NOT
+  uniform over the open interval: there is a boundary layer at each
+  end where one of the two tests is only partly powered -- at
+  n = 10000, d = 0.02 and d = 0.18 both sit at ~0.41, not >0.90.
+  'Confined to the open interval' is a statement about the LIMIT and
+  I wrote it as a statement about a table. See prediction 4.
+
+==========================================================================
+THE FAILED PREDICTION, REPAIRED
+  PREDICTION 4, the repaired version of 2, and it is sharper because it says
+  what the boundary layer DOES. Both tests see the true difference only
+  through a standardised distance: d*sqrt(n/2) for the test against 0, and
+  (S-d)*sqrt(n/2) for the test against the SESOI. So (a) for any FIXED d
+  strictly inside (0, S) the disagreement rate -> 1 as n grows, boundary layer
+  and all; and (b) the layer's width in d shrinks like 1/sqrt(n), so plotting
+  disagreement against d*sqrt(n/2) should collapse different n onto ONE curve.
+  (b) is the real test -- (a) alone is implied by prediction 1.
+
+  (a) a fixed d near the edge, as n grows: d = 0.02
+    n/group  disagree
+      10000     0.407
+      40000     0.879
+     160000     1.000
+     640000     1.000
+  fixed d inside -> 1 : True
+
+  (b) collapse: disagreement against the standardised distance
+      z = d*sqrt(n/2). Same z, different n, should give the same rate.
+          z      n=2000     n=10000     n=50000
+        1.0       0.259       0.257       0.257
+        1.5       0.438       0.440       0.445
+        2.0       0.636       0.640       0.640
+        3.0       0.868       0.913       0.910
+        4.0       0.748       0.991       0.991
+
+      widest spread across n at fixed z : 0.243   collapse: False
+  PREDICTION 4 FAILED.
+  4(a) held; 4(b) failed.
+
+  🛑 4(b) FAILED, and the shape of the failure names my mistake.
+  The collapse is near-exact at z = 1.0, 1.5, 2.0 (spread <= 0.01)
+  and breaks at z = 4, where n=2000 reads 0.748 against 0.991.
+  Because there are TWO standardised distances, not one:
+    z0 = d*sqrt(n/2)      the test against 0
+    zS = (S-d)*sqrt(n/2)  the test against the SESOI
+  and holding z0 fixed while n varies lets zS roam -- at z0=4 it is
+  2.3 at n=2000 and 27.6 at n=50000. I collapsed a two-parameter
+  function on one parameter. Prediction 5 holds both.
+
+==========================================================================
+AND THE REPAIR, REPAIRED
+  PREDICTION 5, the repaired 4(b). The two tests are functions of the data
+  only through (z0, zS) = (d, S-d) * sqrt(n/2), so the whole outcome
+  distribution -- every cell, every verdict, both encodings -- should depend on
+  n, d and S ONLY through that pair. Hold BOTH fixed and vary n by a factor of
+  100 and every rate should be the same to simulation noise. That cannot be
+  done with S fixed, because z0 + zS = S*sqrt(n/2); the SESOI has to be scaled
+  too, which is the content of the claim rather than a dodge. The one thing
+  left over is the degrees of freedom (2n-2), which only shrinks the t toward
+  a normal as n grows, so any residual should be small and one-signed.
+
+     z0    zS      n=500     n=5000    n=50000   spread
+    1.0   1.0      0.000      0.000      0.000    0.000
+    2.0   2.0      0.276      0.276      0.276    0.001
+    4.0   2.0      0.632      0.631      0.625    0.006
+    2.0   4.0      0.633      0.627      0.630    0.006
+    3.0   1.0      0.169      0.173      0.170    0.004
+    1.0   3.0      0.172      0.173      0.169    0.004
+
+  widest spread across a 100x range of n : 0.006
+  PREDICTION 5 HELD.
+  So the disagreement is governed by two standardised distances and
+  nothing else. Read it back into the registration: whether the
+  vignette's `falsify` branch can fire is set by the study's POWER
+  against 0 and against the SESOI -- not by the hypothesis, not by
+  the prose, and not by anything a reviewer sees.
