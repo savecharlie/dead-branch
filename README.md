@@ -17,6 +17,7 @@ python3 ladder_demo.py                    # a real broken rule, mine
 python3 staged_demo.py                    # a rule written in prose, encoded
 python3 harvest.py <scienceverse-clone>   # census over a whole repo
 
+python3 colling_demo.py                   # a real preregistration. needs scipy
 python3 equiv_demo.py                     # needs numpy + scipy
 python3 nextmodel_demo.py                 # needs scipy
 ```
@@ -138,6 +139,96 @@ four lines, written by the two authors of the paper on machine-readable
 falsifiability, inside their own repository, in which falsification was
 impossible — and every tool in the chain stayed quiet. If it can happen there it
 is not a discipline problem. It is a missing check.
+
+## A real preregistration — the one the paper holds up
+
+Every rule above comes out of a package's own files, which is a fair complaint
+to make of the claim. `colling_demo.py` runs the check on a published
+Registered Replication Report's analysis plan: Colling, Szűcs, De Marco, Cipora,
+Ulrich, Nuerk … & McShane (2020), *Registered Replication Report on Fischer et
+al. (2003)*, **AMPPS**, plan at [osf.io/6a2ny](https://osf.io/6a2ny/).
+Seventeen labs. Filed before the data.
+
+**It is the example Lakens & DeBruine choose**, on their page 3:
+
+> in the analysis plan of the Registered Replication Report on Fischer et al.
+> (2003) by Colling et al. (2020), available at https://osf.io/6a2ny/, **a clear
+> decision rule for corroboration is specified**
+
+Their Model 1 rule, verbatim from the plan:
+
+> If the congruency effect is positive and statistically significantly different
+> from zero in the 500 ms and 750 ms delay conditions but not statistically
+> significantly different from zero in the 250 ms and 1000 ms delay conditions,
+> we will consider the findings of Fischer et al. (2003) to be replicated within
+> the limits they propose. If it is positive and statistically significantly
+> different from zero in conditions beyond the 500 ms and 750 ms delay
+> conditions, we can consider the findings of Fischer et al. (2003) to be
+> replicated but for the effect to be more general than they originally proposed.
+
+Four delays, so sixteen possible patterns of "significant and positive". One
+clause is ambiguous — does *"beyond the 500 ms and 750 ms delay conditions"*
+presuppose those two, or name only the extras? Both readings are encoded and
+printed, because that choice is interpretation and you should be able to
+disagree with it:
+
+| | reading A (presupposes) | reading B (extras only) |
+|---|---|---|
+| replicated within their limits | 1 of 16 | 1 of 16 |
+| replicated, more general | 3 of 16 | 12 of 16 |
+| **no declared verdict** | **12 of 16** | **3 of 16** |
+
+### The plan names two grades of success and no failure
+
+Every pattern in that last row is one where the replication did **not** find the
+effect. The plan says what counts as replicated within the original's limits and
+what counts as replicated more generally. It does not say what counts as not
+replicated.
+
+That is the complaint Lakens & DeBruine open with — *researchers often do not
+explicitly state what would corroborate or falsify their prediction* — sitting
+inside the example they picked to show a rule done well. The corroboration half
+was specified carefully enough to quote. The other half was not specified at
+all, and nothing in the chain asks.
+
+Scoped, because this is a claim about someone's document: the file is the only
+thing that GUID resolves to, the Stage 1 proposed analysis. Measured over its
+text, the stem "replicat" occurs **three times, all inside that one sentence**,
+and *not replicat*, *fail to replicat*, *unsuccessful*, *no evidence*, *null
+result* and *falsif* occur **zero** times.
+
+### And "within their limits" is a vanishing branch
+
+To earn the primary verdict the replication must find significance at 500 and
+750 **and fail to find it** at 250 and 1000. Two of its four conditions are
+demands for a non-significant result, so power helps one pair and hurts the
+other. Exact normal-theory arithmetic, true effect 0.20 at 500 and 750:
+
+| N | true offset 0 | 0.02 | 0.05 | 0.10 |
+|---|---|---|---|---|
+| 200 | 0.588 | 0.577 | 0.518 | 0.326 |
+| 500 | 0.892 | 0.849 | 0.631 | 0.151 |
+| 2,000 | 0.903 | 0.730 | 0.153 | 0.000 |
+| 20,000 | 0.903 | 0.037 | 0.000 | 0.000 |
+| 100,000 | 0.903 | 0.000 | 0.000 | 0.000 |
+
+If the effect at 250 and 1000 is **exactly** zero the verdict settles at
+0.95² = 0.903 and stays. For **any** nonzero value, however small, it peaks and
+then falls to zero: a bigger replication becomes less able to confirm the
+original's limits. The branch survives only on the knife edge of an exact point
+null, which is the thing a smallest-effect-of-interest exists because nobody
+believes.
+
+Assumptions are stated in the script and they do work: standard error
+1/√N in effect units, two-sided α = 0.05, and the four delays treated as
+independent where the plan's model is multivariate. Correlation moves the
+numbers, not the direction — the non-significance demand is unaffected by it.
+
+**None of this is an error in the replication.** The team ran it, reported it,
+and specified the rule in public and in advance, which is more than most. It is
+that two properties of that rule are invisible to every check it passed: no
+written failure verdict, and a primary success verdict a larger study is less
+likely to be able to reach.
 
 ## Two encodings of one sentence
 
