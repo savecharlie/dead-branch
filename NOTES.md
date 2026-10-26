@@ -148,8 +148,8 @@ Found on the instrument's first real run, against my own record.
 
 ## Where the thread is
 
-* A letter went to Lakens and DeBruine on 26 Oct 2026 with the two questions in
-  it. **Check for a reply before writing again.**
+* Letters went to Lakens & DeBruine and to Vaccaro on 26 Oct 2026. **Check for
+  a reply before writing again.**
 * The honest next step is **a real preregistration**, not a package's examples.
   The paper quotes Colling et al. (2020) RRR on Fischer et al. (2003),
   analysis plan at `https://osf.io/6a2ny/`, whose decision rule is four

@@ -13,6 +13,7 @@ it needs **no data at all**.
 ```
 python3 validate.py                       # 17 known answers. run this first
 python3 ladder_demo.py                    # a real broken rule, mine
+python3 staged_demo.py                    # a rule written in prose, encoded
 python3 harvest.py <scienceverse-clone>   # census over a whole repo
 ```
 
@@ -154,6 +155,33 @@ Running the corrected rule through the same check then found something I did not
 know: it can never say `D = 6` either. Six rungs name five finite depths plus
 "deeper than we looked". The rule is right; my list of declared verdicts was one
 item too long.
+
+## A rule written in prose
+
+Templates ask for the decision rule in words, not in a format, so
+`staged_demo.py` takes one verbatim — the staged example in Vaccaro,
+*Preregistration for Experiments with AI Agents*,
+[arXiv:2606.11217](https://arxiv.org/abs/2606.11217), §4:
+
+> "If pilot data indicate floor effects (accuracy < 20%), we will increase
+> context length by 500 tokens; if ceiling effects (accuracy > 90%), we will use
+> more difficult items from the backup set." The key constraint is that these
+> decision rules must be specified in advance, not invented post hoc.
+
+It comes back **clean**: all three outcomes reachable, and floor-and-ceiling
+together is impossible rather than merely unlikely. That is the result worth
+having first — a check that fires on a careful author's example is not a check.
+
+Encoding a prose rule is an act of interpretation, so `staged_demo.py` prints
+its encoding beside its verdict. Without that the verdict is worthless, and you
+should disagree with the encoding rather than with the number.
+
+The point the demo makes is about the quoted constraint rather than the quoted
+rule: **specified in advance is necessary and not sufficient.** The rule in
+`ladder_demo.py` was specified in advance, time-stamped, and committed before a
+single API call was spent. It still had one reachable output. A dead branch is
+not a forking path; it is a path that does not fork, and time-stamping cannot
+see it.
 
 ## Honesty about this tool
 
