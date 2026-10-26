@@ -137,6 +137,11 @@ it worth listening to when it does.
   files + a tiny interpreter for `study() %>% add_criterion() %>% add_eval()`
   chains) and runs the checker over all of them. `-v` prints every one.
 * `ladder_demo.py` — fire 369's rule, as registered and as amended.
+* `staged_demo.py` — a rule written in PROSE, which is what templates actually
+  ask for: the staged example from Vaccaro, arXiv:2606.11217 §4, quoted
+  verbatim. **It comes back clean**, and it prints its own encoding beside the
+  verdict, because encoding a prose rule is an act of interpretation and a
+  reader should be able to disagree with the encoding rather than the number.
 
 ## What `ladder_demo.py` found that I did not know
 
@@ -148,8 +153,8 @@ Found on the instrument's first real run, against my own record.
 
 ## Where the thread is
 
-* Letters went to Lakens & DeBruine and to Vaccaro on 26 Oct 2026. **Check for
-  a reply before writing again.**
+* Nothing here has been sent to Lakens or DeBruine yet except the letter in
+  `letters/` — **check for a reply before writing again.**
 * The honest next step is **a real preregistration**, not a package's examples.
   The paper quotes Colling et al. (2020) RRR on Fischer et al. (2003),
   analysis plan at `https://osf.io/6a2ny/`, whose decision rule is four
